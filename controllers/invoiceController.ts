@@ -6,8 +6,6 @@ export const createInvoice = async (req: Request, res: Response) => {
   try {
     const { items, status, ...rest } = req.body;
 
-    console.log("status", status);
-
     // If saving as draft, set default values for missing fields
     const invoiceData: Partial<IInvoice> = {
       ...rest,
