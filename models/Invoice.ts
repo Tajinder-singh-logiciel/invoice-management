@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema, Model } from "mongoose";
+import { generateInvoiceId } from "../utils/generateInvoiceId";
 
 interface IItem {
   name: string;
@@ -68,17 +69,35 @@ const invoiceSchema = new Schema<IInvoice>({
 
 // Custom validation for required fields when status is "paid" or "pending"
 invoiceSchema.pre("validate", function (next) {
+  // Calculate the total if items are modified
+  if (this.isModified("items")) {
+    this.id = this.id || generateInvoiceId();
+    this.items = this.items.map((item: IInvoice["items"][0]) => ({
+      ...item,
+      total: item.quantity * item.price,
+    }));
+
+    this.total = this.items.reduce((sum, item) => sum + (item.total || 0), 0);
+  }
+
+  // Calculate the payment due date if payment terms are modified
+  if (this.isModified("paymentTerms") && this.paymentTerms) {
+    const dueDate = new Date(this.createdAt);
+    dueDate.setDate(dueDate.getDate() + this.paymentTerms);
+    this.paymentDue = dueDate;
+  }
+
+  // Custom validation for required fields when status is "paid" or "pending"
   if (this.status === "paid" || this.status === "pending") {
     if (
-      !this.paymentDue ||
       !this.items.length ||
       !this.total ||
-      !this.senderAddress ||
-      !this.clientAddress ||
+      !this.senderAddress.street ||
+      !this.clientAddress.street ||
       !this.clientEmail ||
       !this.clientName ||
       !this.description ||
-      !this.paymentTerms
+      this.paymentTerms === undefined
     ) {
       return next(
         new Error(
@@ -87,6 +106,7 @@ invoiceSchema.pre("validate", function (next) {
       );
     }
   }
+
   next();
 });
 
