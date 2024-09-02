@@ -70,18 +70,18 @@ const invoiceSchema = new Schema<IInvoice>({
 // Custom validation for required fields when status is "paid" or "pending"
 invoiceSchema.pre("validate", function (next) {
   // Calculate the total if items are modified
-  if (this.isModified("items")) {
-    this.id = this.id || generateInvoiceId();
-    this.items = this.items.map((item: IInvoice["items"][0]) => ({
-      ...item,
-      total: item.quantity * item.price,
-    }));
+  this.id = this.id || generateInvoiceId();
 
-    this.total = this.items.reduce((sum, item) => sum + (item.total || 0), 0);
-  }
+  // Always calculate the total for items
+  this.items = this.items.map((item: IInvoice["items"][0]) => ({
+    ...item,
+    total: item.quantity * item.price,
+  }));
 
-  // Calculate the payment due date if payment terms are modified
-  if (this.isModified("paymentTerms") && this.paymentTerms) {
+  this.total = this.items.reduce((sum, item) => sum + (item.total || 0), 0);
+
+  // Always calculate the payment due date
+  if (this.paymentTerms) {
     const dueDate = new Date(this.createdAt);
     dueDate.setDate(dueDate.getDate() + this.paymentTerms);
     this.paymentDue = dueDate;
