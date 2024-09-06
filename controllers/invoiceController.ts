@@ -81,13 +81,15 @@ export const getInvoices = async (req: Request, res: Response) => {
       return res.status(200).json({ data: invoice, status: "success" });
     }
 
-    const query = status ? { status } : {};
+    let query: any = {};
+    if (status) {
+      query.status = status;
+    }
+
     const invoices = await Invoice.find(query);
     res.status(200).json({ data: invoices, status: "success" });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to retrieve invoices";
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: "Failed to retrieve invoices" });
   }
 };
 
